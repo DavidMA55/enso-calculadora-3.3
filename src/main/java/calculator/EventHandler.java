@@ -23,6 +23,12 @@ public interface EventHandler {
      * Handle a decimal point button press
      */
     void onDecimalPressed();
+
+    /**
+     * Handle special constants button press (pi, e)
+     * @param value The constant value to insert
+     */
+    void onSpecialValuePressed(double value);
     
     /**
      * Handle a binary operator button press

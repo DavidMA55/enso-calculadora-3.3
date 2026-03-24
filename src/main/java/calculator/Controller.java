@@ -62,6 +62,17 @@ public class Controller implements EventHandler {
             view.setDisplay(displayBuffer.toString());
         }
     }
+
+    @Override
+    public void onSpecialValuePressed(double value) {
+
+        // Constants (pi, e) behave as a fresh numeric input.
+        displayBuffer = new StringBuilder();
+        view.clearDisplay();
+        displayBuffer.append(Double.toString(value));
+        view.setDisplay(displayBuffer.toString());
+        resetingInput = false;
+    }
     
     @Override
     public void onBinaryOperatorPressed(BinaryOperatorModes mode) {
