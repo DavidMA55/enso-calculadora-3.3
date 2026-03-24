@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
-import java.util.Locale;
 import javax.imageio.ImageIO;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -48,9 +47,8 @@ public class SwingView implements View {
     public enum ButtonType { NUMBER, FUNCTION }
 
     public SwingView() throws IOException {
-        Locale.setDefault(Locale.US);
-        DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.US);
-        symbols.setDecimalSeparator('.');
+        DecimalFormatSymbols symbols = DecimalFormatSymbols.getInstance();
+        symbols.setDecimalSeparator(',');
         decimalFormat = new DecimalFormat("0.###############", symbols);
         decimalFormat.setGroupingUsed(false);
 
@@ -104,6 +102,8 @@ public class SwingView implements View {
         butNegate = createButton("+/-", ButtonType.NUMBER);
         butDecimal = createButton(".", ButtonType.NUMBER);
         butBackspace = createButton("⌫", ButtonType.FUNCTION); // 👈 NUEVO
+        butPi = createButton("π", ButtonType.NUMBER);
+        butE = createButton("e", ButtonType.NUMBER);
 
         setupLayout();
     }
@@ -157,6 +157,8 @@ public class SwingView implements View {
         subPanels[4].add(butNums[0]);
         subPanels[4].add(butDecimal);
         subPanels[4].add(butBackspace); // 👈 NUEVO
+        subPanels[4].add(butPi);
+        subPanels[4].add(butE);
         mainPanel.add(subPanels[4]);
 
         mainPanel.add(Box.createVerticalStrut(10));
@@ -225,6 +227,8 @@ public class SwingView implements View {
         butNegate.addActionListener(e -> eventHandler.onUnaryOperatorPressed(NEGATE));
 
         butDecimal.addActionListener(e -> eventHandler.onDecimalPressed());
+        butPi.addActionListener(e -> eventHandler.onSpecialValuePressed(Math.PI));
+        butE.addActionListener(e -> eventHandler.onSpecialValuePressed(Math.E));
         butEqual.addActionListener(e -> eventHandler.onEqualsPressed());
         butCancel.addActionListener(e -> eventHandler.onClearPressed());
 
@@ -254,25 +258,7 @@ public class SwingView implements View {
 
     @Override
     public Double getDisplayValue() {
-        String textValue = text.getText().trim();
-
-        if (textValue.isEmpty()) return 0.0;
-
-        switch (textValue) {
-            case "NaN": return Double.NaN;
-            case "Inf": return Double.POSITIVE_INFINITY;
-            case "-Inf": return Double.NEGATIVE_INFINITY;
-        }
-
-        if (textValue.endsWith(".")) {
-            textValue = textValue.substring(0, textValue.length() - 1);
-        }
-
-        try {
-            return Double.parseDouble(textValue);
-        } catch (NumberFormatException e) {
-            return 0.0;
-        }
+        return parseDisplayValue(text.getText());
     }
 
     @Override
@@ -293,8 +279,39 @@ public class SwingView implements View {
 
     @Override
     public void setDisplay(String displayText) {
-        text.setText(displayText);
+        text.setText(toDisplayFormat(displayText));
         startNewInput = true;
+    }
+
+    static Double parseDisplayValue(String displayText) {
+        String textValue = displayText == null ? "" : displayText.trim();
+
+        if (textValue.isEmpty()) return 0.0;
+
+        switch (textValue) {
+            case "NaN": return Double.NaN;
+            case "Inf": return Double.POSITIVE_INFINITY;
+            case "-Inf": return Double.NEGATIVE_INFINITY;
+        }
+
+        if (textValue.endsWith(",") || textValue.endsWith(".")) {
+            textValue = textValue.substring(0, textValue.length() - 1);
+        }
+
+        String normalized = textValue.replace(',', '.');
+
+        try {
+            return Double.parseDouble(normalized);
+        } catch (NumberFormatException e) {
+            return 0.0;
+        }
+    }
+
+    static String toDisplayFormat(String displayText) {
+        if (displayText == null || displayText.isEmpty()) {
+            return "";
+        }
+        return displayText.replace('.', ',');
     }
 
     private ImageIcon loadIcon() throws IOException {
