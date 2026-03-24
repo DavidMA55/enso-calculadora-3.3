@@ -1,10 +1,3 @@
-/**
- * @name        Swing implementation of Calculator View interface
- * @package     calculator
- * @file        SwingView.java
- * @description 
- */
-
 package calculator;
 
 import java.awt.Color;
@@ -37,9 +30,9 @@ public class SwingView implements View {
 
     private final JButton[] butNums;
     private final JButton butAdd, butMinus, butMultiply, butDivide,
-            butEqual, butCancel, butSqrt, butSquare, butInv, butCos, 
-            butSin, butTan, butPower, butLog, butPercent, butAbs, butBin, 
-            butln, butNegate, butDecimal, butPi, butE;
+            butEqual, butCancel, butSqrt, butSquare, butInv, butCos,
+            butSin, butTan, butPower, butLog, butPercent, butAbs, butBin,
+            butln, butNegate, butDecimal, butBackspace, butPi, butE;
 
     private EventHandler eventHandler;
 
@@ -70,16 +63,16 @@ public class SwingView implements View {
             subPanels[i] = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 3));
         }
 
-        // --- JTextField for display ---
+        // Display
         text = new JTextField();
         text.setFont(textFont);
         text.setEditable(false);
         text.setHorizontalAlignment(JTextField.RIGHT);
         text.setColumns(15);
         text.setBackground(Color.WHITE);
-        text.setOpaque(true); 
+        text.setOpaque(true);
         text.setBorder(javax.swing.BorderFactory.createLineBorder(
-            UIManager.getColor("Panel.background"), 5));
+                UIManager.getColor("Panel.background"), 5));
 
         // Number buttons
         butNums = new JButton[10];
@@ -108,6 +101,7 @@ public class SwingView implements View {
         butBin = createButton("bin", ButtonType.FUNCTION);
         butNegate = createButton("+/-", ButtonType.NUMBER);
         butDecimal = createButton(".", ButtonType.NUMBER);
+        butBackspace = createButton("⌫", ButtonType.FUNCTION); // 👈 NUEVO
         butPi = createButton("π", ButtonType.NUMBER);
         butE = createButton("e", ButtonType.NUMBER);
 
@@ -126,12 +120,12 @@ public class SwingView implements View {
     }
 
     private void setupLayout() {
-        // --- Display panel ---
+
         JPanel displayPanel = new JPanel(new java.awt.BorderLayout());
         displayPanel.add(text, java.awt.BorderLayout.CENTER);
         mainPanel.add(displayPanel);
 
-        // --- Row 1 ---
+        // Row 1
         subPanels[1].add(butNums[1]);
         subPanels[1].add(butNums[2]);
         subPanels[1].add(butNums[3]);
@@ -140,7 +134,7 @@ public class SwingView implements View {
         subPanels[1].add(butMinus);
         mainPanel.add(subPanels[1]);
 
-        // --- Row 2 ---
+        // Row 2
         subPanels[2].add(butNums[4]);
         subPanels[2].add(butNums[5]);
         subPanels[2].add(butNums[6]);
@@ -149,7 +143,7 @@ public class SwingView implements View {
         subPanels[2].add(butDivide);
         mainPanel.add(subPanels[2]);
 
-        // --- Row 3 ---
+        // Row 3
         subPanels[3].add(butNums[7]);
         subPanels[3].add(butNums[8]);
         subPanels[3].add(butNums[9]);
@@ -158,36 +152,36 @@ public class SwingView implements View {
         subPanels[3].add(butCancel);
         mainPanel.add(subPanels[3]);
 
-        // --- Row 4 ---
+        // Row 4 (AQUÍ VA ⌫)
         subPanels[4].add(butNegate);
         subPanels[4].add(butNums[0]);
         subPanels[4].add(butDecimal);
+        subPanels[4].add(butBackspace); // 👈 NUEVO
         subPanels[4].add(butPi);
         subPanels[4].add(butE);
         mainPanel.add(subPanels[4]);
 
-        // --- Extra separation ---
         mainPanel.add(Box.createVerticalStrut(10));
 
-        // --- Row 5 ---
+        // Row 5
         subPanels[5].add(butInv);
         subPanels[5].add(butln);
         subPanels[5].add(butLog);
         mainPanel.add(subPanels[5]);
 
-        // --- Row 6 ---
+        // Row 6
         subPanels[6].add(butSquare);
         subPanels[6].add(butSqrt);
         subPanels[6].add(butPower);
         mainPanel.add(subPanels[6]);
 
-        // --- Row 7 ---
+        // Row 7
         subPanels[7].add(butCos);
         subPanels[7].add(butSin);
         subPanels[7].add(butTan);
         mainPanel.add(subPanels[7]);
 
-        // --- Row 8 ---
+        // Row 8
         subPanels[8].add(butPercent);
         subPanels[8].add(butAbs);
         subPanels[8].add(butBin);
@@ -207,19 +201,18 @@ public class SwingView implements View {
     @Override
     public void setActionListener(EventHandler handler) {
         this.eventHandler = handler;
+
         for (int i = 0; i < 10; i++) {
             final int index = i;
             butNums[i].addActionListener(e -> eventHandler.onNumberPressed(index));
         }
 
-        // Binary operators
         butAdd.addActionListener(e -> eventHandler.onBinaryOperatorPressed(ADD));
         butMinus.addActionListener(e -> eventHandler.onBinaryOperatorPressed(MINUS));
         butMultiply.addActionListener(e -> eventHandler.onBinaryOperatorPressed(MULTIPLY));
         butDivide.addActionListener(e -> eventHandler.onBinaryOperatorPressed(DIVIDE));
         butPower.addActionListener(e -> eventHandler.onBinaryOperatorPressed(POWER));
 
-        // Unary operators
         butSquare.addActionListener(e -> eventHandler.onUnaryOperatorPressed(SQUARE));
         butSqrt.addActionListener(e -> eventHandler.onUnaryOperatorPressed(SQRT));
         butInv.addActionListener(e -> eventHandler.onUnaryOperatorPressed(INV));
@@ -233,12 +226,24 @@ public class SwingView implements View {
         butBin.addActionListener(e -> eventHandler.onUnaryOperatorPressed(BIN));
         butNegate.addActionListener(e -> eventHandler.onUnaryOperatorPressed(NEGATE));
 
-        // Other actions
         butDecimal.addActionListener(e -> eventHandler.onDecimalPressed());
         butPi.addActionListener(e -> eventHandler.onSpecialValuePressed(Math.PI));
         butE.addActionListener(e -> eventHandler.onSpecialValuePressed(Math.E));
         butEqual.addActionListener(e -> eventHandler.onEqualsPressed());
         butCancel.addActionListener(e -> eventHandler.onClearPressed());
+
+        // 👇 NUEVO
+        butBackspace.addActionListener(e -> eventHandler.onBackspacePressed());
+    }
+
+    @Override
+    public String getDisplayText() {
+        return text.getText();
+    }
+
+    @Override
+    public void setDisplayText(String value) {
+        text.setText(value);
     }
 
     @Override
@@ -281,17 +286,12 @@ public class SwingView implements View {
     static Double parseDisplayValue(String displayText) {
         String textValue = displayText == null ? "" : displayText.trim();
 
-        if (textValue.isEmpty()) {
-            return 0.0;
-        }
+        if (textValue.isEmpty()) return 0.0;
 
         switch (textValue) {
-            case "NaN":
-                return Double.NaN;
-            case "Inf":
-                return Double.POSITIVE_INFINITY;
-            case "-Inf":
-                return Double.NEGATIVE_INFINITY;
+            case "NaN": return Double.NaN;
+            case "Inf": return Double.POSITIVE_INFINITY;
+            case "-Inf": return Double.NEGATIVE_INFINITY;
         }
 
         if (textValue.endsWith(",") || textValue.endsWith(".")) {

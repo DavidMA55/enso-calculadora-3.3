@@ -18,6 +18,7 @@ public class Controller implements EventHandler {
     private final View view;
     private StringBuilder displayBuffer;
     private boolean resetingInput = false;
+    private boolean operatorPressed = false;
 
     public Controller(CalculatorModel model, View view) {
         this.model = model;
@@ -39,6 +40,7 @@ public class Controller implements EventHandler {
 
         displayBuffer.append(number);
         view.setDisplay(displayBuffer.toString());
+        operatorPressed = false;
     }
     
     @Override
@@ -112,6 +114,7 @@ public class Controller implements EventHandler {
                 displayBuffer.append(formattedResult);
             }
             resetingInput = true;
+            operatorPressed = true;
         }
     }
     
@@ -170,6 +173,19 @@ public class Controller implements EventHandler {
             String formatted = String.format(java.util.Locale.US, "%.10f", result);
             String normalized = formatted.replaceAll("0*$", "").replaceAll("\\.$", "");
             return normalized.replace('.', ',');
+        }
+    }
+
+    @Override
+    public void onBackspacePressed() {
+        if (operatorPressed) return;
+
+        String current = view.getDisplayText();
+
+        if (current.length() <= 1) {
+            view.setDisplayText("0");
+        } else {
+            view.setDisplayText(current.substring(0, current.length() - 1));
         }
     }
 }
