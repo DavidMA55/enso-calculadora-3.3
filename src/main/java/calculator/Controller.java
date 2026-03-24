@@ -52,13 +52,36 @@ public class Controller implements EventHandler {
             resetingInput = false;
         }
        
-        // Prevent multiple decimal points in the current number
-        if (!displayBuffer.toString().contains(".")) {
-            // Handle leading decimal point by prepending a "0"
+        // Prevent multiple decimal separators in the current number
+        if (!displayBuffer.toString().contains(",")) {
+            // Handle leading decimal separator by prepending a "0"
             if (displayBuffer.length() == 0) {
                 displayBuffer.append("0");
             }
-            displayBuffer.append(".");
+            displayBuffer.append(",");
+            view.setDisplay(displayBuffer.toString());
+        }
+    }
+    
+    @Override
+    public void onExpPressed() {
+        
+        // After a user presses equals and gets a result, 
+        // the next exp press should start a new input with "0E"
+        if (resetingInput) {
+            displayBuffer = new StringBuilder();
+            view.clearDisplay();
+            resetingInput = false;
+        }
+        
+        // Prevent multiple 'E' in the current number (AC3)
+        String currentBuffer = displayBuffer.toString().toUpperCase();
+        if (!currentBuffer.contains("E")) {
+            // Handle empty buffer or only negative sign by prepending "0"
+            if (displayBuffer.length() == 0 || displayBuffer.toString().equals("-")) {
+                displayBuffer.append("0");
+            }
+            displayBuffer.append("E");
             view.setDisplay(displayBuffer.toString());
         }
     }
@@ -84,8 +107,9 @@ public class Controller implements EventHandler {
 
             displayBuffer = new StringBuilder();
             if (result != null) {
-                view.setDisplay(formatResult(result));
-                displayBuffer.append(result);
+                String formattedResult = formatResult(result);
+                view.setDisplay(formattedResult);
+                displayBuffer.append(formattedResult);
             }
             resetingInput = true;
         }
@@ -100,8 +124,9 @@ public class Controller implements EventHandler {
             Double result = model.calculateUnary(mode, num);
 
             displayBuffer = new StringBuilder();
-            view.setDisplay(formatResult(result));
-            displayBuffer.append(result);
+            String formattedResult = formatResult(result);
+            view.setDisplay(formattedResult);
+            displayBuffer.append(formattedResult);
             resetingInput = true;
         }
     }
@@ -115,8 +140,9 @@ public class Controller implements EventHandler {
             Double result = model.calculateEqual(num);
 
             displayBuffer = new StringBuilder();
-            view.setDisplay(formatResult(result));
-            displayBuffer.append(result);
+            String formattedResult = formatResult(result);
+            view.setDisplay(formattedResult);
+            displayBuffer.append(formattedResult);
             resetingInput = true;
         }
     }
@@ -142,7 +168,8 @@ public class Controller implements EventHandler {
         }
         else {
             String formatted = String.format(java.util.Locale.US, "%.10f", result);
-            return formatted.replaceAll("0*$", "").replaceAll("\\.$", "");
+            String normalized = formatted.replaceAll("0*$", "").replaceAll("\\.$", "");
+            return normalized.replace('.', ',');
         }
     }
 }

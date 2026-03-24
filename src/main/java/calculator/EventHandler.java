@@ -31,6 +31,11 @@ public interface EventHandler {
     void onSpecialValuePressed(double value);
     
     /**
+     * Handle an exp button press (scientific notation)
+     */
+    void onExpPressed();
+    
+    /**
      * Handle a binary operator button press
      * @param operator The operator (add, minus, multiply, divide, power)
      */
