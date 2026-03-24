@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
-import java.util.Locale;
 import javax.imageio.ImageIO;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -55,9 +54,8 @@ public class SwingView implements View {
     public enum ButtonType { NUMBER, FUNCTION }
 
     public SwingView() throws IOException {
-        Locale.setDefault(Locale.US);
-        DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.US);
-        symbols.setDecimalSeparator('.');
+        DecimalFormatSymbols symbols = DecimalFormatSymbols.getInstance();
+        symbols.setDecimalSeparator(',');
         decimalFormat = new DecimalFormat("0.###############", symbols);
         decimalFormat.setGroupingUsed(false);
 
@@ -109,8 +107,8 @@ public class SwingView implements View {
         butAbs = createButton("abs", ButtonType.FUNCTION);
         butBin = createButton("bin", ButtonType.FUNCTION);
         butNegate = createButton("+/-", ButtonType.NUMBER);
-        butDecimal = createButton(".", ButtonType.NUMBER);
         butExp = createButton("exp", ButtonType.FUNCTION);
+        butDecimal = createButton(",", ButtonType.NUMBER);
 
         setupLayout();
     }
@@ -253,33 +251,7 @@ public class SwingView implements View {
 
     @Override
     public Double getDisplayValue() {
-        String textValue = text.getText().trim();
-
-        if (textValue.isEmpty()) {
-            return 0.0;
-        }
-
-        // Detectar cadeas especiais
-        switch (textValue) {
-            case "NaN":
-                return Double.NaN;
-            case "Inf":
-                return Double.POSITIVE_INFINITY;
-            case "-Inf":
-                return Double.NEGATIVE_INFINITY;
-        }
-
-        // Eliminar punto final sen díxitos
-        if (textValue.endsWith(".")) {
-            textValue = textValue.substring(0, textValue.length() - 1);
-        }
-
-        try {
-            return Double.parseDouble(textValue);
-        } catch (NumberFormatException e) {
-            // Se por calquera motivo non é un número válido, devolve 0.0
-            return 0.0;
-        }
+        return parseDisplayValue(text.getText());
     }
 
     @Override
@@ -300,8 +272,44 @@ public class SwingView implements View {
 
     @Override
     public void setDisplay(String displayText) {
-        text.setText(displayText);
+        text.setText(toDisplayFormat(displayText));
         startNewInput = true;
+    }
+
+    static Double parseDisplayValue(String displayText) {
+        String textValue = displayText == null ? "" : displayText.trim();
+
+        if (textValue.isEmpty()) {
+            return 0.0;
+        }
+
+        switch (textValue) {
+            case "NaN":
+                return Double.NaN;
+            case "Inf":
+                return Double.POSITIVE_INFINITY;
+            case "-Inf":
+                return Double.NEGATIVE_INFINITY;
+        }
+
+        if (textValue.endsWith(",") || textValue.endsWith(".")) {
+            textValue = textValue.substring(0, textValue.length() - 1);
+        }
+
+        String normalized = textValue.replace(',', '.');
+
+        try {
+            return Double.parseDouble(normalized);
+        } catch (NumberFormatException e) {
+            return 0.0;
+        }
+    }
+
+    static String toDisplayFormat(String displayText) {
+        if (displayText == null || displayText.isEmpty()) {
+            return "";
+        }
+        return displayText.replace('.', ',');
     }
 
     private ImageIcon loadIcon() throws IOException {
