@@ -45,4 +45,6 @@ public interface EventHandler {
      * Handle the clear/reset button press
      */
     void onClearPressed();
+
+    void onBackspacePressed();
 }
