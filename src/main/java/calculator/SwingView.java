@@ -1,124 +1,310 @@
 package calculator;
 
-import javax.swing.*;
-import java.awt.*;
+import java.awt.Color;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.io.InputStream;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.util.Locale;
+import javax.imageio.ImageIO;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+import javax.swing.UIManager;
 
-public class SwingView extends JFrame implements View {
+import static calculator.domain.BinaryOperatorModes.*;
+import static calculator.domain.UnaryOperatorModes.*;
 
-    private JTextField display;
-    private EventHandler handler;
+public class SwingView implements View {
 
-    private JPanel panel;
+    private final JFrame frame;
+    private final JPanel mainPanel;
+    private final JPanel[] subPanels;
+    private final JTextField text;
 
-    // Configuración
-    private ConfigLoader config;
+    private final JButton[] butNums;
+    private final JButton butAdd, butMinus, butMultiply, butDivide,
+            butEqual, butCancel, butSqrt, butSquare, butInv, butCos,
+            butSin, butTan, butPower, butLog, butPercent, butAbs, butBin,
+            butln, butNegate, butDecimal, butBackspace;
 
-    public SwingView(EventHandler handler) {
-        this.handler = handler;
-        this.config = new ConfigLoader();
+    private EventHandler eventHandler;
 
-        initUI();
-    }
+    private final Font numberFont = new Font("Segoe UI", Font.BOLD, 18);
+    private final Font functionFont = new Font("Segoe UI", Font.PLAIN, 18);
+    private final Font textFont = new Font("Segoe UI", Font.BOLD, 24);
+    private final ImageIcon image;
 
-    private void initUI() {
+    private final DecimalFormat decimalFormat;
+    private boolean startNewInput = true;
 
-        // 🔤 Fuente desde config
-        String fontName = config.get("font.name", "Arial");
-        int fontSize = Integer.parseInt(config.get("font.size", "16"));
-        Font font = new Font(fontName, Font.PLAIN, fontSize);
+    public enum ButtonType { NUMBER, FUNCTION }
 
-        // 🎨 Colores desde config
-        Color bgColor = Color.decode(config.get("bg.color", "#000000"));
-        Color buttonColor = Color.decode(config.get("button.color", "#cccccc"));
-        Color textColor = Color.decode(config.get("text.color", "#ffffff"));
+    public SwingView() throws IOException {
+        Locale.setDefault(Locale.US);
+        DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.US);
+        symbols.setDecimalSeparator('.');
+        decimalFormat = new DecimalFormat("0.###############", symbols);
+        decimalFormat.setGroupingUsed(false);
 
-        setTitle("Calculator");
-        setSize(300, 400);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame = new JFrame("Calculator");
+        image = loadIcon();
 
-        panel = new JPanel();
-        panel.setLayout(new BorderLayout());
-        panel.setBackground(bgColor);
+        mainPanel = new JPanel();
+        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
 
-        // 📟 Display
-        display = new JTextField("0");
-        display.setEditable(false);
-        display.setFont(font);
-        display.setBackground(bgColor);
-        display.setForeground(textColor);
-        display.setHorizontalAlignment(JTextField.RIGHT);
-
-        panel.add(display, BorderLayout.NORTH);
-
-        // 🔢 Panel de botones
-        JPanel buttons = new JPanel();
-        buttons.setLayout(new GridLayout(5, 4, 5, 5));
-        buttons.setBackground(bgColor);
-
-        // 🔘 Crear botones
-        String[] btnLabels = {
-                "7", "8", "9", "/",
-                "4", "5", "6", "*",
-                "1", "2", "3", "-",
-                "0", ".", "=", "+",
-                "CE", "⌫"
-        };
-
-        for (String text : btnLabels) {
-            JButton button = new JButton(text);
-            button.setFont(font);
-            button.setBackground(buttonColor);
-            button.setForeground(textColor);
-
-            button.addActionListener(e -> handleButton(text));
-
-            buttons.add(button);
+        subPanels = new JPanel[9];
+        for (int i = 0; i < 9; i++) {
+            subPanels[i] = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 3));
         }
 
-        panel.add(buttons, BorderLayout.CENTER);
+        // Display
+        text = new JTextField();
+        text.setFont(textFont);
+        text.setEditable(false);
+        text.setHorizontalAlignment(JTextField.RIGHT);
+        text.setColumns(15);
+        text.setBackground(Color.WHITE);
+        text.setOpaque(true);
+        text.setBorder(javax.swing.BorderFactory.createLineBorder(
+                UIManager.getColor("Panel.background"), 5));
 
-        add(panel);
-        setVisible(true);
-    }
-
-    // 🎯 Manejo de botones
-    private void handleButton(String text) {
-
-        if (text.matches("[0-9]")) {
-            handler.onDigitPressed(Integer.parseInt(text));
-        } else if (text.equals(".")) {
-            handler.onDecimalPointPressed();
-        } else if (text.equals("+")) {
-            handler.onAddPressed();
-        } else if (text.equals("-")) {
-            handler.onSubtractPressed();
-        } else if (text.equals("*")) {
-            handler.onMultiplyPressed();
-        } else if (text.equals("/")) {
-            handler.onDividePressed();
-        } else if (text.equals("=")) {
-            handler.onEqualsPressed();
-        } else if (text.equals("CE")) {
-            handler.onClearPressed();
-        } else if (text.equals("⌫")) {
-            handler.onBackspacePressed(); // 👈 NUEVO
+        // Number buttons
+        butNums = new JButton[10];
+        for (int i = 0; i < 10; i++) {
+            butNums[i] = createButton(String.valueOf(i), ButtonType.NUMBER);
         }
+
+        // Function buttons
+        butAdd = createButton("+", ButtonType.FUNCTION);
+        butMinus = createButton("-", ButtonType.FUNCTION);
+        butMultiply = createButton("*", ButtonType.FUNCTION);
+        butDivide = createButton("/", ButtonType.FUNCTION);
+        butEqual = createButton("=", ButtonType.FUNCTION);
+        butCancel = createButton("C", ButtonType.FUNCTION);
+        butSqrt = createButton("sqrt", ButtonType.FUNCTION);
+        butSquare = createButton("x^2", ButtonType.FUNCTION);
+        butInv = createButton("1/x", ButtonType.FUNCTION);
+        butCos = createButton("cos", ButtonType.FUNCTION);
+        butSin = createButton("sin", ButtonType.FUNCTION);
+        butTan = createButton("tan", ButtonType.FUNCTION);
+        butln = createButton("ln", ButtonType.FUNCTION);
+        butPower = createButton("x^y", ButtonType.FUNCTION);
+        butLog = createButton("log", ButtonType.FUNCTION);
+        butPercent = createButton("%", ButtonType.FUNCTION);
+        butAbs = createButton("abs", ButtonType.FUNCTION);
+        butBin = createButton("bin", ButtonType.FUNCTION);
+        butNegate = createButton("+/-", ButtonType.NUMBER);
+        butDecimal = createButton(".", ButtonType.NUMBER);
+        butBackspace = createButton("⌫", ButtonType.FUNCTION); // 👈 NUEVO
+
+        setupLayout();
     }
 
-    // 📟 Métodos nuevos para controlador
+    private JButton createButton(String label, ButtonType type) {
+        JButton b = new JButton(label);
+        b.setFont(type == ButtonType.NUMBER ? numberFont : functionFont);
+        b.setPreferredSize(new java.awt.Dimension(80, 40));
+        b.setBackground(type == ButtonType.NUMBER ? Color.WHITE : new Color(220, 255, 255));
+        b.setFocusPainted(false);
+        b.setBorderPainted(true);
+        b.setOpaque(true);
+        return b;
+    }
+
+    private void setupLayout() {
+
+        JPanel displayPanel = new JPanel(new java.awt.BorderLayout());
+        displayPanel.add(text, java.awt.BorderLayout.CENTER);
+        mainPanel.add(displayPanel);
+
+        // Row 1
+        subPanels[1].add(butNums[1]);
+        subPanels[1].add(butNums[2]);
+        subPanels[1].add(butNums[3]);
+        subPanels[1].add(Box.createHorizontalStrut(15));
+        subPanels[1].add(butAdd);
+        subPanels[1].add(butMinus);
+        mainPanel.add(subPanels[1]);
+
+        // Row 2
+        subPanels[2].add(butNums[4]);
+        subPanels[2].add(butNums[5]);
+        subPanels[2].add(butNums[6]);
+        subPanels[2].add(Box.createHorizontalStrut(15));
+        subPanels[2].add(butMultiply);
+        subPanels[2].add(butDivide);
+        mainPanel.add(subPanels[2]);
+
+        // Row 3
+        subPanels[3].add(butNums[7]);
+        subPanels[3].add(butNums[8]);
+        subPanels[3].add(butNums[9]);
+        subPanels[3].add(Box.createHorizontalStrut(15));
+        subPanels[3].add(butEqual);
+        subPanels[3].add(butCancel);
+        mainPanel.add(subPanels[3]);
+
+        // Row 4 (AQUÍ VA ⌫)
+        subPanels[4].add(butNegate);
+        subPanels[4].add(butNums[0]);
+        subPanels[4].add(butDecimal);
+        subPanels[4].add(butBackspace); // 👈 NUEVO
+        mainPanel.add(subPanels[4]);
+
+        mainPanel.add(Box.createVerticalStrut(10));
+
+        // Row 5
+        subPanels[5].add(butInv);
+        subPanels[5].add(butln);
+        subPanels[5].add(butLog);
+        mainPanel.add(subPanels[5]);
+
+        // Row 6
+        subPanels[6].add(butSquare);
+        subPanels[6].add(butSqrt);
+        subPanels[6].add(butPower);
+        mainPanel.add(subPanels[6]);
+
+        // Row 7
+        subPanels[7].add(butCos);
+        subPanels[7].add(butSin);
+        subPanels[7].add(butTan);
+        mainPanel.add(subPanels[7]);
+
+        // Row 8
+        subPanels[8].add(butPercent);
+        subPanels[8].add(butAbs);
+        subPanels[8].add(butBin);
+        mainPanel.add(subPanels[8]);
+    }
+
+    public void init() {
+        frame.setSize(465, 460);
+        frame.setLocationRelativeTo(null);
+        frame.setResizable(false);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        if (image != null) frame.setIconImage(image.getImage());
+        frame.add(mainPanel);
+        frame.setVisible(true);
+    }
+
+    @Override
+    public void setActionListener(EventHandler handler) {
+        this.eventHandler = handler;
+
+        for (int i = 0; i < 10; i++) {
+            final int index = i;
+            butNums[i].addActionListener(e -> eventHandler.onNumberPressed(index));
+        }
+
+        butAdd.addActionListener(e -> eventHandler.onBinaryOperatorPressed(ADD));
+        butMinus.addActionListener(e -> eventHandler.onBinaryOperatorPressed(MINUS));
+        butMultiply.addActionListener(e -> eventHandler.onBinaryOperatorPressed(MULTIPLY));
+        butDivide.addActionListener(e -> eventHandler.onBinaryOperatorPressed(DIVIDE));
+        butPower.addActionListener(e -> eventHandler.onBinaryOperatorPressed(POWER));
+
+        butSquare.addActionListener(e -> eventHandler.onUnaryOperatorPressed(SQUARE));
+        butSqrt.addActionListener(e -> eventHandler.onUnaryOperatorPressed(SQRT));
+        butInv.addActionListener(e -> eventHandler.onUnaryOperatorPressed(INV));
+        butCos.addActionListener(e -> eventHandler.onUnaryOperatorPressed(COS));
+        butSin.addActionListener(e -> eventHandler.onUnaryOperatorPressed(SIN));
+        butTan.addActionListener(e -> eventHandler.onUnaryOperatorPressed(TAN));
+        butLog.addActionListener(e -> eventHandler.onUnaryOperatorPressed(LOG));
+        butln.addActionListener(e -> eventHandler.onUnaryOperatorPressed(LN));
+        butPercent.addActionListener(e -> eventHandler.onUnaryOperatorPressed(PERCENT));
+        butAbs.addActionListener(e -> eventHandler.onUnaryOperatorPressed(ABS));
+        butBin.addActionListener(e -> eventHandler.onUnaryOperatorPressed(BIN));
+        butNegate.addActionListener(e -> eventHandler.onUnaryOperatorPressed(NEGATE));
+
+        butDecimal.addActionListener(e -> eventHandler.onDecimalPressed());
+        butEqual.addActionListener(e -> eventHandler.onEqualsPressed());
+        butCancel.addActionListener(e -> eventHandler.onClearPressed());
+
+        // 👇 NUEVO
+        butBackspace.addActionListener(e -> eventHandler.onBackspacePressed());
+    }
+
     @Override
     public String getDisplayText() {
-        return display.getText();
+        return text.getText();
     }
 
     @Override
-    public void setDisplayText(String text) {
-        display.setText(text);
+    public void setDisplayText(String value) {
+        text.setText(value);
     }
 
-    // (si ya tienes este método, mantenlo)
     @Override
-    public void showResult(String result) {
-        display.setText(result);
+    public void displayResult(Double result) {
+        if (result == null || Double.isNaN(result) || Double.isInfinite(result)) {
+            text.setText("Error");
+        } else {
+            text.setText(decimalFormat.format(result));
+        }
+        startNewInput = true;
+    }
+
+    @Override
+    public Double getDisplayValue() {
+        String textValue = text.getText().trim();
+
+        if (textValue.isEmpty()) return 0.0;
+
+        switch (textValue) {
+            case "NaN": return Double.NaN;
+            case "Inf": return Double.POSITIVE_INFINITY;
+            case "-Inf": return Double.NEGATIVE_INFINITY;
+        }
+
+        if (textValue.endsWith(".")) {
+            textValue = textValue.substring(0, textValue.length() - 1);
+        }
+
+        try {
+            return Double.parseDouble(textValue);
+        } catch (NumberFormatException e) {
+            return 0.0;
+        }
+    }
+
+    @Override
+    public void appendToDisplay(String value) {
+        if (startNewInput) {
+            text.setText(value);
+            startNewInput = false;
+        } else {
+            text.setText(text.getText() + value);
+        }
+    }
+
+    @Override
+    public void clearDisplay() {
+        text.setText("");
+        startNewInput = true;
+    }
+
+    @Override
+    public void setDisplay(String displayText) {
+        text.setText(displayText);
+        startNewInput = true;
+    }
+
+    private ImageIcon loadIcon() throws IOException {
+        try (InputStream is = getClass().getResourceAsStream("/icon/icon.png")) {
+            if (is == null) return null;
+            BufferedImage bufferedImage = ImageIO.read(is);
+            return new ImageIcon(bufferedImage);
+        } catch (Exception e) {
+            System.err.println("Could not load icon: " + e.getMessage());
+            return null;
+        }
     }
 }
